@@ -1,0 +1,11 @@
+idf_component_register(
+    SRCS
+        "DRV8825.c"
+        "LEDC_PWM/LEDC_PWM.c"
+    INCLUDE_DIRS
+        "."
+    PRIV_INCLUDE_DIRS
+        "LEDC_PWM"
+    PRIV_REQUIRES
+        esp_driver_ledc
+)
