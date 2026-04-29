@@ -4,8 +4,7 @@ idf_component_register(
         "LEDC_PWM/LEDC_PWM.c"
     INCLUDE_DIRS
         "."
-    PRIV_INCLUDE_DIRS
         "LEDC_PWM"
-    PRIV_REQUIRES
+    REQUIRES
         esp_driver_ledc
 )

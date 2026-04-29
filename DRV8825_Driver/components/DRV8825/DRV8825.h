@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include "LEDC_PWM/LEDC_PWM.h"
 
 
 typedef enum {
@@ -21,6 +22,7 @@ typedef enum {
 
 typedef struct{
     StepMode_e step_mode;
+    LedcPwm_s ledc_struct;
     Direction_e direction;
     uint8_t step_pin;
     uint8_t enable_pin;
@@ -32,5 +34,6 @@ typedef struct{
     uint8_t ms2_pin;
 }DRV8825_t;
 
+void DRV8825_InitializeLedc(DRV8825_t * driverStruct);
 
 #endif
