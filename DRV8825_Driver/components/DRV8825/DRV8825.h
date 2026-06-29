@@ -4,7 +4,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "LEDC_PWM/LEDC_PWM.h"
-
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/event_groups.h"
 
 typedef enum {
     DRV8825_STEP_MODE_FULL = 0,

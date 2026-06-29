@@ -2,9 +2,12 @@ idf_component_register(
     SRCS
         "DRV8825.c"
         "LEDC_PWM/LEDC_PWM.c"
+        "PCNT/PCNT.c"
     INCLUDE_DIRS
         "."
         "LEDC_PWM"
+        "PCNT"
     REQUIRES
         esp_driver_ledc
+        esp_driver_pcnt
 )
