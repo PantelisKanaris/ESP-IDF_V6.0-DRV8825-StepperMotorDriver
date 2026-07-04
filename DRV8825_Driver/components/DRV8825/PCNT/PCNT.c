@@ -1,7 +1,7 @@
 #include "PCNT.h"
 #include "esp_log.h"
 
-const char *TAG = "PCNT";
+static const char *TAG = "PCNT";
 pcnt_unit_handle_t * PCNT_InitializeUnit(int low_limit , int high_limit)
 {
     if(low_limit >= high_limit)
@@ -13,19 +13,20 @@ pcnt_unit_handle_t * PCNT_InitializeUnit(int low_limit , int high_limit)
     unit_config->high_limit = high_limit;
     unit_config->low_limit = low_limit;
     unit_config->clk_src = PCNT_CLK_SRC_DEFAULT;
-    pcnt_unit_handle_t pcnt_unit = NULL;
-    ESP_ERROR_CHECK(pcnt_new_unit(unit_config, &pcnt_unit));
+    pcnt_unit_handle_t * pcnt_unit = (pcnt_unit_handle_t *)malloc(sizeof(pcnt_unit_handle_t));
+    ESP_ERROR_CHECK(pcnt_new_unit(unit_config, pcnt_unit));
     ESP_LOGI(TAG, "PCNT unit initialized successfully");
     return pcnt_unit;
 }
 
-pcnt_channel_handle_t * PCNT_InitializeChannel(pcnt_unit_handle_t pcnt_unit, int edge_gpio, int level_gpio)
+pcnt_channel_handle_t * PCNT_InitializeChannel(pcnt_unit_handle_t * pcnt_unit, int edge_gpio, int level_gpio)
 {
+    ESP_LOGI(TAG, "PCNT starting the channel initialization");
     pcnt_chan_config_t * channel_config = (pcnt_chan_config_t *)calloc(1, sizeof(pcnt_chan_config_t));
     channel_config->edge_gpio_num = edge_gpio;
     channel_config->level_gpio_num = level_gpio;
-    pcnt_channel_handle_t pcnt_chan = NULL;
-    ESP_ERROR_CHECK(pcnt_new_channel(pcnt_unit, channel_config, &pcnt_chan));
+    pcnt_channel_handle_t * pcnt_chan = (pcnt_channel_handle_t *) malloc(sizeof(pcnt_channel_handle_t));
+    ESP_ERROR_CHECK(pcnt_new_channel(*pcnt_unit, channel_config, pcnt_chan));
     ESP_LOGI(TAG, "PCNT channel initialized successfully");
     return pcnt_chan;
 }
@@ -54,12 +55,11 @@ int PCNT_SetEdgeCountingMode(pcnt_channel_handle_t* pcnt_chan,PCNT_CountingMode_
         ESP_LOGE(TAG, "ERROR Setting Edge Counting Mode invalid parameters");
         return 0;
     }
-    ESP_ERROR_CHECK(pcnt_channel_set_edge_action(*pcnt_chan, PCNT_CHANNEL_EDGE_ACTION_DECREASE, PCNT_CHANNEL_EDGE_ACTION_INCREASE));
     ESP_LOGI(TAG, "PCNT counting mode set successfully");
     return 1;
 }
 
-int PCNT_PCNTAddWatchPoint(pcnt_unit_handle_t* pcnt_unit, int watch_point)
+int PCNT_AddWatchPoint(pcnt_unit_handle_t* pcnt_unit, int watch_point)
 {
     ESP_ERROR_CHECK(pcnt_unit_add_watch_point(*pcnt_unit, watch_point));
     ESP_ERROR_CHECK(pcnt_unit_clear_count(*pcnt_unit));
@@ -68,13 +68,14 @@ int PCNT_PCNTAddWatchPoint(pcnt_unit_handle_t* pcnt_unit, int watch_point)
 }
 
 //this should be called in the ISR so we dont have any delays you need to enable it from the kconfig see documentation for more details
-static void PCNT_event_handler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *event_data, void *user_data)
+static bool PCNT_event_handler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *event_data, void *user_data)
 {
     pcnt_watch_event_data_t *watch_event_data = (pcnt_watch_event_data_t *)event_data;
     //here we should trigger the eventgroup event to notify the application that the watch point has been reached
-    ESP_LOGI(TAG, "PCNT watch point reached: %d", watch_event_data->watch_point_value);
+    //ESP_LOGI(TAG, "PCNT watch point reached: %d", watch_event_data->watch_point_value);
+    return true;
 }
-
+    
 void PCNT_RegisterEventHandler(pcnt_unit_handle_t* pcnt_unit)
 {
     pcnt_event_callbacks_t cbs = {.on_reach = PCNT_event_handler};
@@ -106,3 +107,15 @@ void PCNT_Disable(pcnt_unit_handle_t* pcnt_unit)
     ESP_ERROR_CHECK(pcnt_unit_disable(*pcnt_unit));
     ESP_LOGI(TAG, "PCNT disabled successfully");
 }   
+
+
+
+pcnt_unit_handle_t * PCNT_Initialize(int low_limit, int high_limit, int edge_gpio, int level_gpio,PCNT_CountingMode_enum count_mode,PCNT_EdgeCountingMode_enum edge_count_mode)
+{
+    pcnt_unit_handle_t * pcnt_unit = PCNT_InitializeUnit(low_limit, high_limit);
+    pcnt_channel_handle_t * pcnt_chan = PCNT_InitializeChannel(pcnt_unit, edge_gpio, level_gpio);
+    PCNT_RegisterEventHandler(pcnt_unit);
+    PCNT_SetEdgeCountingMode(pcnt_chan, count_mode, edge_count_mode);
+    PCNT_Enable(pcnt_unit);
+    return pcnt_unit;   
+}

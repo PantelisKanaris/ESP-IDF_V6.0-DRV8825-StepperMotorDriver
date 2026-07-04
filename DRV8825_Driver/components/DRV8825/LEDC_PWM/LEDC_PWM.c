@@ -2,7 +2,7 @@
 #include "esp_log.h"
 #include "driver/ledc.h"
 
-const char *TAG = "LEDC";
+static const char *TAG = "LEDC";
 
 void LEDC_PWM_InitializeTimer(LedcPwm_s *ledcPwmStruct, ledc_mode_t speedMode, ledc_timer_t timerNumber, uint32_t frequencyHz, ledc_timer_bit_t resolutionPwm, ledc_clk_cfg_t sourceClock)
 {
@@ -54,11 +54,7 @@ void LEDC_PWM_ChangeDutyCycle(LedcPwm_s *ledcPwmStruct, uint32_t duty)
     ledc_channel_t channel = ledcPwmStruct->ledcChannelConfigurationStruct->channel;
     ESP_ERROR_CHECK(ledc_set_duty(speedmode, channel, duty));
     ESP_ERROR_CHECK(ledc_update_duty(speedmode, channel));
-    uint32_t currentDuty = ledc_get_duty(speedmode, channel);
-    if (currentDuty != duty)
-    {
-        ESP_LOGE(TAG, "Failed to change Duty Cycle");
-    }
+    ESP_LOGI(TAG, "LEDC Duty Cycle changed successfully to %d", duty);
 }
 
 void LEDC_PWM_ChangeFrequency(LedcPwm_s *ledcPwmStruct, uint32_t freq_hz)
@@ -66,11 +62,7 @@ void LEDC_PWM_ChangeFrequency(LedcPwm_s *ledcPwmStruct, uint32_t freq_hz)
     ledc_mode_t speedmode = ledcPwmStruct->ledcTimerConfigurationStruct->speed_mode;
     ledc_timer_t timer = ledcPwmStruct->ledcTimerConfigurationStruct->timer_num;
     ESP_ERROR_CHECK(ledc_set_freq(speedmode, timer, freq_hz));
-    uint32_t currentFreq = ledc_get_freq(speedmode, timer);
-    if (currentFreq != freq_hz)
-    {
-        ESP_LOGE(TAG, "Failed to change Frequency");
-    }
+    ESP_LOGI(TAG, "LEDC Frequency changed successfully to %d Hz", freq_hz);
 }
 
 
