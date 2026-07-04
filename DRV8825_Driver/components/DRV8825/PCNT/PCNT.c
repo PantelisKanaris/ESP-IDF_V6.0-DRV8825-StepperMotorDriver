@@ -61,9 +61,24 @@ int PCNT_SetEdgeCountingMode(pcnt_channel_handle_t* pcnt_chan,PCNT_CountingMode_
 
 int PCNT_AddWatchPoint(pcnt_unit_handle_t* pcnt_unit, int watch_point)
 {
-    ESP_ERROR_CHECK(pcnt_unit_add_watch_point(*pcnt_unit, watch_point));
+
+    //TODO: check if the watch point is already added and if so remove it and add it again to avoid the ESP_ERR_INVALID_STATE error
+    ESP_ERROR_CHECK(pcnt_unit_stop(*pcnt_unit));
+    pcnt_unit_remove_watch_point(*pcnt_unit, watch_point);
+    esp_err_t ret = pcnt_unit_add_watch_point(*pcnt_unit, watch_point);
+    if (ret == ESP_ERR_INVALID_STATE)
+    {
+        ESP_LOGW("PCNT", "Watch point %d already added", watch_point);
+        return ESP_OK;
+    }
+    else if (ret != ESP_OK)
+    {
+        ESP_LOGE("PCNT", "Failed to add watch point %d: %s",
+                 watch_point, esp_err_to_name(ret));
+        return 0;
+    }
     ESP_ERROR_CHECK(pcnt_unit_clear_count(*pcnt_unit));
-    ESP_LOGI(TAG, "PCNT watch point added successfully");
+    ESP_LOGI("PCNT", "PCNT watch point %d added successfully", watch_point);
     return 1;
 }
 

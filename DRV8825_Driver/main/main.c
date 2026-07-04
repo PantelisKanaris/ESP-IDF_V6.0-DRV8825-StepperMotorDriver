@@ -13,7 +13,10 @@ void app_main(void)
     // pcnt_unit = PCNT_Initialize(-1000, 1000, 2, -1,PCNT_COUNT_INC, PCNT_PositiveEdgeCounting);
     // PCNT_AddWatchPoint(pcnt_unit, 800);
     // LEDC_PWM_ChangeDutyCycle(&(driverStruct->ledc_struct),8192/2);
-    DRV8825_InitializeDriver(driverStruct, 400, 2, -10000, 10000, 2, -1,PCNT_COUNT_INC, PCNT_PositiveEdgeCounting);
-    DRV8825_MoveXSteps(driverStruct, 10, 400);
+    DRV8825_InitializeDriver(driverStruct, 200, 2,1, DRV8825_DIR_CW, -10000, 10000, 2, -1,PCNT_COUNT_INC, PCNT_PositiveEdgeCounting);
+    DRV8825_MoveXSteps(driverStruct, 200, 400);
+    DRV8825_SetDirection(driverStruct, DRV8825_DIR_CCW);
+    vTaskDelay(pdMS_TO_TICKS(10000));
+    DRV8825_MoveXSteps(driverStruct, 200, 400);
 
 }

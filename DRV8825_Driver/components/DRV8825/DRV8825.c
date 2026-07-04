@@ -2,6 +2,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
+#include "driver/gpio.h"
 static const char *TAG = "DRV8825";
 void DRV8825_InitializeLedc(DRV8825_t * driverStruct,int frequencyHz,int gpioOutputPin)
 {
@@ -22,8 +23,10 @@ void DRV8825_InitializeCounter(DRV8825_t * driverStruct,int low_limit, int high_
     driverStruct->pcnt_unit = PCNT_Initialize(low_limit, high_limit, edge_gpio, level_gpio,count_mode,edge_count_mode, &driverStruct->event_group);
 }
 
-void DRV8825_InitializeDriver(DRV8825_t * driverStruct, int frequencyHz,int gpioOutputPin,int low_limit, int high_limit, int edge_gpio, int level_gpio,PCNT_CountingMode_enum count_mode,PCNT_EdgeCountingMode_enum edge_count_mode)
+void DRV8825_InitializeDriver(DRV8825_t * driverStruct, int frequencyHz,int gpioOutputPin,int dirpin,Direction_e direction,int low_limit, int high_limit, int edge_gpio, int level_gpio,PCNT_CountingMode_enum count_mode,PCNT_EdgeCountingMode_enum edge_count_mode)
 {
+    driverStruct->dir_pin = dirpin;   
+    DRV8825_SetDirection(driverStruct, direction);
     DRV8825_InitializeLedc(driverStruct, frequencyHz, gpioOutputPin);
     ESP_LOGI(TAG, "LEDC Initialized");
     DRV8825_InitializeCounter(driverStruct, low_limit, high_limit, edge_gpio, level_gpio, count_mode, edge_count_mode);
@@ -56,13 +59,13 @@ void DRV8825_MoveXSteps(DRV8825_t * driverStruct, int steps,uint32_t frequencyHz
     //TODO make the steps parameter to correspond to the steps of the stepper motor based on the frequency.
     DRV8825_ClearCounter(driverStruct);
     DRV8825_ChangeFrequency(driverStruct,frequencyHz);
-    steps = (frequencyHz*steps);
     DRV8825_SetCounterWatchPoint(driverStruct, steps);
     DRV8825_StartCounter(driverStruct);
     DRV8825_ChangeDutyCycle(driverStruct,8192/2);
     xEventGroupWaitBits(driverStruct->event_group, 0x01, pdTRUE, pdFALSE, portMAX_DELAY);
     DRV8825_ChangeDutyCycle(driverStruct,0);
     DRV8825_ClearCounter(driverStruct);
+    xEventGroupClearBits(driverStruct->event_group, 0x01);
 }
 
 void DRV8825_ChangeDutyCycle(DRV8825_t * driverStruct,uint32_t duty)
@@ -74,4 +77,32 @@ void DRV8825_ChangeFrequency(DRV8825_t * driverStruct,uint32_t frequencyHz)
 {
     LEDC_PWM_ChangeFrequency(&(driverStruct->ledc_struct),frequencyHz);
 }
+
+void DRV8825_SetDirection(DRV8825_t *driverStruct, Direction_e direction)
+{
+    if (driverStruct == NULL)
+    {
+        return;
+    }
+
+    driverStruct->direction = direction;
+
+    switch (direction)
+    {
+        case DRV8825_DIR_CW:
+            ESP_ERROR_CHECK(gpio_set_level(driverStruct->dir_pin, 1));
+            break;
+
+        case DRV8825_DIR_CCW:
+            ESP_ERROR_CHECK(gpio_set_level(driverStruct->dir_pin, 0));
+            break;
+
+        default:
+            ESP_LOGE("DRV8825", "Invalid direction");
+            break;
+    }
+    ESP_LOGI(TAG, "Direction set to %s", direction == DRV8825_DIR_CW ? "CW" : "CCW");
+}
+
+
 
