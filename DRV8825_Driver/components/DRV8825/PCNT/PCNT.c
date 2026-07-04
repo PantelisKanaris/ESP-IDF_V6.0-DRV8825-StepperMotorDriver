@@ -71,15 +71,21 @@ int PCNT_AddWatchPoint(pcnt_unit_handle_t* pcnt_unit, int watch_point)
 static bool PCNT_event_handler(pcnt_unit_handle_t unit, const pcnt_watch_event_data_t *event_data, void *user_data)
 {
     pcnt_watch_event_data_t *watch_event_data = (pcnt_watch_event_data_t *)event_data;
-    //here we should trigger the eventgroup event to notify the application that the watch point has been reached
+    EventGroupHandle_t * event_group = (EventGroupHandle_t *)user_data;
+    if(event_group)
+    {
+        //here we should trigger the eventgroup event to notify the application that the watch point has been reached
+        xEventGroupSetBits(*event_group, 0x01);
+        return true;
+    }
     //ESP_LOGI(TAG, "PCNT watch point reached: %d", watch_event_data->watch_point_value);
-    return true;
+    return false;
 }
     
-void PCNT_RegisterEventHandler(pcnt_unit_handle_t* pcnt_unit)
+void PCNT_RegisterEventHandler(pcnt_unit_handle_t* pcnt_unit , EventGroupHandle_t * event_group)
 {
     pcnt_event_callbacks_t cbs = {.on_reach = PCNT_event_handler};
-    ESP_ERROR_CHECK(pcnt_unit_register_event_callbacks(*pcnt_unit, &cbs, NULL));
+    ESP_ERROR_CHECK(pcnt_unit_register_event_callbacks(*pcnt_unit, &cbs, event_group));
     ESP_LOGI(TAG, "PCNT event handler registered successfully");
 }
 
@@ -110,11 +116,11 @@ void PCNT_Disable(pcnt_unit_handle_t* pcnt_unit)
 
 
 
-pcnt_unit_handle_t * PCNT_Initialize(int low_limit, int high_limit, int edge_gpio, int level_gpio,PCNT_CountingMode_enum count_mode,PCNT_EdgeCountingMode_enum edge_count_mode)
+pcnt_unit_handle_t * PCNT_Initialize(int low_limit, int high_limit, int edge_gpio, int level_gpio,PCNT_CountingMode_enum count_mode,PCNT_EdgeCountingMode_enum edge_count_mode, EventGroupHandle_t * event_group)
 {
     pcnt_unit_handle_t * pcnt_unit = PCNT_InitializeUnit(low_limit, high_limit);
     pcnt_channel_handle_t * pcnt_chan = PCNT_InitializeChannel(pcnt_unit, edge_gpio, level_gpio);
-    PCNT_RegisterEventHandler(pcnt_unit);
+    PCNT_RegisterEventHandler(pcnt_unit, event_group);
     PCNT_SetEdgeCountingMode(pcnt_chan, count_mode, edge_count_mode);
     PCNT_Enable(pcnt_unit);
     return pcnt_unit;   
